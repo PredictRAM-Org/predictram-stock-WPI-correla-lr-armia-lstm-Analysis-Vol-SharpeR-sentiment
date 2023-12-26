@@ -44,8 +44,7 @@ def predict_future_lstm(last_observed_price, model, min_max_scaler, num_steps=1)
     return min_max_scaler.inverse_transform(np.array(predicted_prices).reshape(1, -1))[0]
 
 # Function to get sentiment scores for a given text
-def get_sentiment_scores(text):
-    sid = SentimentIntensityAnalyzer()
+def get_sentiment_scores(sid, text):
     sentiment_scores = sid.polarity_scores(text)
     return sentiment_scores['pos'], sentiment_scores['neu'], sentiment_scores['neg'], sentiment_scores['compound']
 
