@@ -48,34 +48,40 @@ def get_sentiment_scores(sid, text):
     sentiment_scores = sid.polarity_scores(text)
     return sentiment_scores['pos'], sentiment_scores['neu'], sentiment_scores['neg'], sentiment_scores['compound']
 
-# Function to fetch news and calculate sentiment scores
-def get_news_sentiment_scores(stock_name, api_key):
-    url = "https://news-api14.p.rapidapi.com/top-headlines"
-    querystring = {"q": stock_name, "language": "en", "pageSize": "5"}
-    headers = {
-        "X-RapidAPI-Key": api_key,
-        "X-RapidAPI-Host": "news-api14.p.rapidapi.com"
-    }
-    response = requests.get(url, headers=headers, params=querystring)
-    news_data = response.json()
+# Function to fetch news and calculate sentiment scores for each stock
+def get_news_sentiment_scores(stock_names, api_key):
+    sentiment_scores_list = []
 
-    positivity_scores, neutrality_scores, negativity_scores, compound_scores = [], [], [], []
+    for stock_name in stock_names:
+        url = "https://news-api14.p.rapidapi.com/top-headlines"
+        querystring = {"q": stock_name, "language": "en", "pageSize": "5"}
+        headers = {
+            "X-RapidAPI-Key": api_key,
+            "X-RapidAPI-Host": "news-api14.p.rapidapi.com"
+        }
+        response = requests.get(url, headers=headers, params=querystring)
+        news_data = response.json()
 
-    for article in news_data['articles']:
-        # Create a new SentimentIntensityAnalyzer for each article
+        # Create a new SentimentIntensityAnalyzer for each stock
         sid = SentimentIntensityAnalyzer()
-        pos, neu, neg, compound = get_sentiment_scores(sid, article['title'])
-        positivity_scores.append(pos)
-        neutrality_scores.append(neu)
-        negativity_scores.append(neg)
-        compound_scores.append(compound)
 
-    avg_positivity = np.mean(positivity_scores) if positivity_scores else 0.0
-    avg_neutrality = np.mean(neutrality_scores) if neutrality_scores else 0.0
-    avg_negativity = np.mean(negativity_scores) if negativity_scores else 0.0
-    avg_compound = np.mean(compound_scores) if compound_scores else 0.0
+        positivity_scores, neutrality_scores, negativity_scores, compound_scores = [], [], [], []
 
-    return avg_positivity, avg_neutrality, avg_negativity, avg_compound
+        for article in news_data['articles']:
+            pos, neu, neg, compound = get_sentiment_scores(sid, article['title'])
+            positivity_scores.append(pos)
+            neutrality_scores.append(neu)
+            negativity_scores.append(neg)
+            compound_scores.append(compound)
+
+        avg_positivity = np.mean(positivity_scores) if positivity_scores else 0.0
+        avg_neutrality = np.mean(neutrality_scores) if neutrality_scores else 0.0
+        avg_negativity = np.mean(negativity_scores) if negativity_scores else 0.0
+        avg_compound = np.mean(compound_scores) if compound_scores else 0.0
+
+        sentiment_scores_list.append((avg_positivity, avg_neutrality, avg_negativity, avg_compound))
+
+    return sentiment_scores_list
 
 # Load WPI data
 WPI_data = pd.read_excel("WPI.xlsx")
@@ -123,23 +129,15 @@ if st.button("Train Models"):
     future_prices_arima_list = []
     latest_actual_prices = []
     future_price_lstm_list = []
-    sentiment_scores_list = []  # New list for sentiment scores
-    positivity_scores_list = []
-    neutrality_scores_list = []
-    negativity_scores_list = []
-    compound_scores_list = []
     stock_names = []
     volatilities = []
     sharpe_ratios = []
+    sentiment_scores_list = []
 
     for index, row in stocks_data.iterrows():
         stock_name = row['Stock']
 
-        # Fetch sentiment scores for the stock's latest 5 news reports
-        sentiment_score = get_news_sentiment_scores(stock_name, "f6dde4233cmsha8c2e88f35ed868p173a8bjsnba9808b5b893")
-        sentiment_scores_list.append(sentiment_score)
-
-        # Fetch stock data and filter based on the selected date range
+        # Fetch stock data and filter based on selected date range
         stock_file_path = os.path.join("stock_folder", f"{stock_name}.xlsx")
         if os.path.exists(stock_file_path):
             selected_stock_data = pd.read_excel(stock_file_path)
@@ -226,6 +224,9 @@ if st.button("Train Models"):
             stock_names.append(stock_name)
             volatilities.append(annualized_volatility)
             sharpe_ratios.append(sharpe_ratio)
+
+            # Fetch sentiment scores for each stock's latest 5 news reports
+            sentiment_scores_list.extend(get_news_sentiment_scores([stock_name], "f6dde4233cmsha8c2e88f35ed868p173a8bjsnba9808b5b893"))
 
     # Create a DataFrame for results
     results_data = {
