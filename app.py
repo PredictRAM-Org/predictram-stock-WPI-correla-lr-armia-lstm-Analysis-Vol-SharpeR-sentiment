@@ -62,26 +62,37 @@ def get_news_sentiment_scores(stock_names, api_key):
         response = requests.get(url, headers=headers, params=querystring)
         news_data = response.json()
 
-        # Create a new SentimentIntensityAnalyzer for each stock
-        sid = SentimentIntensityAnalyzer()
+        # Fetch sentiment scores for each stock's latest 5 news reports
+sentiment_scores_list = []
 
-        positivity_scores, neutrality_scores, negativity_scores, compound_scores = [], [], [], []
+for stock_name in stock_names:
+    url = "https://news-api14.p.rapidapi.com/top-headlines"
+    querystring = {"q": stock_name, "language": "en", "pageSize": "5"}
+    headers = {
+        "X-RapidAPI-Key": api_key,
+        "X-RapidAPI-Host": "news-api14.p.rapidapi.com"
+    }
+    response = requests.get(url, headers=headers, params=querystring)
+    news_data = response.json()
 
-        for article in news_data['articles']:
-            pos, neu, neg, compound = get_sentiment_scores(sid, article['title'])
-            positivity_scores.append(pos)
-            neutrality_scores.append(neu)
-            negativity_scores.append(neg)
-            compound_scores.append(compound)
+    # Create a new SentimentIntensityAnalyzer for each stock
+    sid = SentimentIntensityAnalyzer()
 
-        avg_positivity = np.mean(positivity_scores) if positivity_scores else 0.0
-        avg_neutrality = np.mean(neutrality_scores) if neutrality_scores else 0.0
-        avg_negativity = np.mean(negativity_scores) if negativity_scores else 0.0
-        avg_compound = np.mean(compound_scores) if compound_scores else 0.0
+    positivity_scores, neutrality_scores, negativity_scores, compound_scores = [], [], [], []
 
-        sentiment_scores_list.append((avg_positivity, avg_neutrality, avg_negativity, avg_compound))
+    for article in news_data['articles']:
+        pos, neu, neg, compound = get_sentiment_scores(sid, article['title'])
+        positivity_scores.append(pos)
+        neutrality_scores.append(neu)
+        negativity_scores.append(neg)
+        compound_scores.append(compound)
 
-    return sentiment_scores_list
+    avg_positivity = np.mean(positivity_scores) if positivity_scores else 0.0
+    avg_neutrality = np.mean(neutrality_scores) if neutrality_scores else 0.0
+    avg_negativity = np.mean(negativity_scores) if negativity_scores else 0.0
+    avg_compound = np.mean(compound_scores) if compound_scores else 0.0
+
+    sentiment_scores_list.append((avg_positivity, avg_neutrality, avg_negativity, avg_compound))
 
 # Load WPI data
 WPI_data = pd.read_excel("WPI.xlsx")
