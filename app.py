@@ -43,16 +43,16 @@ def predict_future_lstm(last_observed_price, model, min_max_scaler, num_steps=1)
 
     return min_max_scaler.inverse_transform(np.array(predicted_prices).reshape(1, -1))[0]
 
-# Function to get sentiment score for a given text
-def get_sentiment_score(text):
+# Function to get sentiment scores for a given text
+def get_sentiment_scores(text):
     sid = SentimentIntensityAnalyzer()
-    sentiment_score = sid.polarity_scores(text)['compound']
-    return sentiment_score
+    sentiment_scores = sid.polarity_scores(text)
+    return sentiment_scores['pos'], sentiment_scores['neu'], sentiment_scores['neg'], sentiment_scores['compound']
 
 # Function to fetch news and calculate sentiment scores
-def get_news_sentiment_score(stock_name, api_key):
+def get_news_sentiment_scores(stock_name, api_key):
     url = "https://news-api14.p.rapidapi.com/top-headlines"
-    querystring = {"q": stock_name, "language": "en", "pageSize": "10"}
+    querystring = {"q": stock_name, "language": "en", "pageSize": "5"}
     headers = {
         "X-RapidAPI-Key": api_key,
         "X-RapidAPI-Host": "news-api14.p.rapidapi.com"
@@ -60,10 +60,21 @@ def get_news_sentiment_score(stock_name, api_key):
     response = requests.get(url, headers=headers, params=querystring)
     news_data = response.json()
 
-    sentiment_scores = [get_sentiment_score(article['title']) for article in news_data['articles']]
-    average_sentiment = np.mean(sentiment_scores) if sentiment_scores else 0.0
+    positivity_scores, neutrality_scores, negativity_scores, compound_scores = [], [], [], []
 
-    return average_sentiment
+    for article in news_data['articles']:
+        pos, neu, neg, compound = get_sentiment_scores(article['title'])
+        positivity_scores.append(pos)
+        neutrality_scores.append(neu)
+        negativity_scores.append(neg)
+        compound_scores.append(compound)
+
+    avg_positivity = np.mean(positivity_scores) if positivity_scores else 0.0
+    avg_neutrality = np.mean(neutrality_scores) if neutrality_scores else 0.0
+    avg_negativity = np.mean(negativity_scores) if negativity_scores else 0.0
+    avg_compound = np.mean(compound_scores) if compound_scores else 0.0
+
+    return avg_positivity, avg_neutrality, avg_negativity, avg_compound
 
 # Load WPI data
 WPI_data = pd.read_excel("WPI.xlsx")
@@ -112,6 +123,10 @@ if st.button("Train Models"):
     latest_actual_prices = []
     future_price_lstm_list = []
     sentiment_scores_list = []  # New list for sentiment scores
+    positivity_scores_list = []
+    neutrality_scores_list = []
+    negativity_scores_list = []
+    compound_scores_list = []
     stock_names = []
     volatilities = []
     sharpe_ratios = []
@@ -120,7 +135,7 @@ if st.button("Train Models"):
         stock_name = row['Stock']
 
         # Fetch sentiment scores for the stock's latest 5 news reports
-        sentiment_score = get_news_sentiment_score(stock_name, "f6dde4233cmsha8c2e88f35ed868p173a8bjsnba9808b5b893")
+        sentiment_score = get_news_sentiment_scores(stock_name, "f6dde4233cmsha8c2e88f35ed868p173a8bjsnba9808b5b893")
         sentiment_scores_list.append(sentiment_score)
 
         # Fetch stock data and filter based on the selected date range
@@ -219,7 +234,11 @@ if st.button("Train Models"):
         'Predicted Price Change (ARIMA)': future_prices_arima_list,
         'Latest Actual Price': latest_actual_prices,
         'Predicted Stock Price (LSTM)': future_price_lstm_list,
-        'Sentiment Score': sentiment_scores_list,  # New column for sentiment scores
+        'Sentiment Score': sentiment_scores_list,
+        'Positivity Score': [score[0] for score in sentiment_scores_list],
+        'Neutrality Score': [score[1] for score in sentiment_scores_list],
+        'Negativity Score': [score[2] for score in sentiment_scores_list],
+        'Compound Score': [score[3] for score in sentiment_scores_list],
         'Volatility': volatilities,
         'Sharpe Ratio': sharpe_ratios
     }
