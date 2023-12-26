@@ -52,7 +52,7 @@ def get_sentiment_score(text):
 # Function to fetch news and calculate sentiment scores
 def get_news_sentiment_score(stock_name, api_key):
     url = "https://news-api14.p.rapidapi.com/top-headlines"
-    querystring = {"q": stock_name, "language": "en", "pageSize": "5"}
+    querystring = {"q": stock_name, "language": "en", "pageSize": "10"}
     headers = {
         "X-RapidAPI-Key": api_key,
         "X-RapidAPI-Host": "news-api14.p.rapidapi.com"
