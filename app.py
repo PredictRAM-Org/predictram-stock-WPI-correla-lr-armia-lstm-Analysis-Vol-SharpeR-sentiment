@@ -63,7 +63,9 @@ def get_news_sentiment_scores(stock_name, api_key):
     positivity_scores, neutrality_scores, negativity_scores, compound_scores = [], [], [], []
 
     for article in news_data['articles']:
-        pos, neu, neg, compound = get_sentiment_scores(article['title'])
+        # Create a new SentimentIntensityAnalyzer for each article
+        sid = SentimentIntensityAnalyzer()
+        pos, neu, neg, compound = get_sentiment_scores(sid, article['title'])
         positivity_scores.append(pos)
         neutrality_scores.append(neu)
         negativity_scores.append(neg)
