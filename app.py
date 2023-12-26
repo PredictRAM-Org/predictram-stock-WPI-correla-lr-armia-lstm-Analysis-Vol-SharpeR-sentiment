@@ -9,6 +9,10 @@ from tensorflow.keras.layers import LSTM, Dense
 from sklearn.preprocessing import MinMaxScaler
 import requests
 from nltk.sentiment.vader import SentimentIntensityAnalyzer
+import nltk
+
+# Download the NLTK VADER lexicon data
+nltk.download('vader_lexicon')
 
 # Function to prepare data for LSTM
 def prepare_data_for_lstm(data, look_back=1):
