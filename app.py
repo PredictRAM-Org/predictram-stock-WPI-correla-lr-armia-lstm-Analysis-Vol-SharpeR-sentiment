@@ -46,21 +46,22 @@ def get_sentiment_score(text):
     return sentiment_score
 
 # Function to get news articles and sentiment scores for a given stock
-def get_news_sentiment_scores(stock_name, num_articles=5):
-    url = "https://share-market-news-api-india.p.rapidapi.com/marketNews"
-    querystring = {"symbol": stock_name, "page": "1", "per_page": str(num_articles)}
-    headers = {
-        "X-RapidAPI-Key": "f6dde4233cmsha8c2e88f35ed868p173a8bjsnba9808b5b893",
-        "X-RapidAPI-Host": "share-market-news-api-india.p.rapidapi.com"
+def get_news_sentiment_scores(api_key, stock_name, num_articles=5):
+    url = "https://newsapi.org/v2/everything"
+    query_params = {
+        "apiKey": api_key,
+        "q": stock_name,
+        "pageSize": num_articles
     }
-    response = requests.get(url, headers=headers, params=querystring)
+
+    response = requests.get(url, params=query_params)
     news_data = response.json()
 
     sentiment_scores = []
     articles_list = []
 
-    if 'data' in news_data and 'news' in news_data['data']:
-        articles = news_data['data']['news']
+    if 'articles' in news_data:
+        articles = news_data['articles']
         for article in articles:
             title = article.get('title', '')
             description = article.get('description', '')
@@ -107,6 +108,9 @@ filtered_WPI_data = WPI_data.loc[start_date:end_date]
 
 # User input for expected WPI inflation
 expected_inflation = st.number_input("Enter Expected Upcoming WPI Inflation:", min_value=0.0, step=0.01)
+
+# News API key from newsapi.org
+news_api_key = "5843e8b1715a4c1fb6628befb47ca1e8"  # Replace with your actual API key
 
 # Train models
 if st.button("Train Models"):
@@ -189,7 +193,7 @@ if st.button("Train Models"):
             st.write(f"Predicted Stock Price for Future Inflation (LSTM): {future_price_lstm}")
 
             # Get news articles and sentiment scores
-            news_articles = get_news_sentiment_scores(stock_name, num_articles=5)
+            news_articles = get_news_sentiment_scores(news_api_key, stock_name, num_articles=5)
 
             # Display news articles and sentiment scores
             st.write(f"News Articles and Sentiment Scores for {stock_name}:")
