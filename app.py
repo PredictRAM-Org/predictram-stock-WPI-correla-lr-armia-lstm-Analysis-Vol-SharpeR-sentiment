@@ -50,7 +50,7 @@ def get_news_sentiment_scores(api_key, stock_name, num_articles=5):
     url = "https://newsapi.org/v2/everything"
     query_params = {
         "apiKey": api_key,
-        "q": stock_name,
+        "q": f"{stock_name} AND (business OR finance) AND India",  # Search for Indian business stocks and finance-related news
         "pageSize": num_articles
     }
 
