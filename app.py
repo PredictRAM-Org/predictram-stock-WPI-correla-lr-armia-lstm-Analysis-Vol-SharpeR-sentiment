@@ -46,7 +46,7 @@ def get_sentiment_score(text):
     return sentiment_score
 
 # Function to get news articles and sentiment scores for a given stock
-def get_news_sentiment_scores(api_key, stock_name, num_articles=10):
+def get_news_sentiment_scores(api_key, stock_name, num_articles=5):
     url = "https://newsapi.org/v2/everything"
     query_params = {
         "apiKey": api_key,
@@ -68,7 +68,7 @@ def get_news_sentiment_scores(api_key, stock_name, num_articles=10):
             full_text = f"{title}. {description}"
             sentiment_score = get_sentiment_score(full_text)
             sentiment_scores.append(sentiment_score)
-            articles_list.append({'Title': title, 'Description': description, 'Sentiment Score': sentiment_score})
+            articles_list.append({'Title': title, 'Description': description, 'Sentiment Score': sentiment_score, 'Link': article.get('url', '')})
 
     return articles_list
 
@@ -117,6 +117,7 @@ if st.button("Train Models"):
     st.write(f"Training models with data range: {data_range}, expected WPI inflation: {expected_inflation}...")
 
     correlations = []
+    actual_correlations = []  # New feature
     future_prices_lr_list = []
     future_prices_arima_list = []
     latest_actual_prices = []
@@ -154,6 +155,7 @@ if st.button("Train Models"):
             # Show correlation between 'Close' column and 'WPI Change'
             correlation_close_WPI = merged_data['Close'].corr(merged_data['WPI Change'])
             correlation_actual = merged_data['Close'].corr(merged_data['WPI'])
+            actual_correlations.append(correlation_actual)  # New feature
 
             st.write(f"Correlation between 'Close' and 'WPI Change' for {stock_name}: {correlation_close_WPI}")
             st.write(f"Actual Correlation between 'Close' and 'WPI' for {stock_name}: {correlation_actual}")
@@ -206,9 +208,10 @@ if st.button("Train Models"):
                     st.write(f"Title: {article['Title']}")
                     st.write(f"Description: {article['Description']}")
                     st.write(f"Sentiment Score: {article['Sentiment Score']}")
+                    st.write(f"Link: {article['Link']}")
                     st.write("-----")
 
-                news_sentiment_scores.append({'Stock': stock_name, 'Avg. Sentiment Score': avg_sentiment_score})
+                news_sentiment_scores.append({'Stock': stock_name, 'Avg. Sentiment Score': avg_sentiment_score, 'News Articles': news_articles})
             else:
                 st.warning(f"No news found for {stock_name}.")
 
@@ -241,13 +244,14 @@ if st.button("Train Models"):
     results_data = {
         'Stock': stock_names,
         'Correlation with WPI Change': correlations,
+        'Actual Correlation with WPI': actual_correlations,  # New feature
         'Predicted Price Change (Linear Regression)': future_prices_lr_list,
         'Predicted Price Change (ARIMA)': future_prices_arima_list,
         'Latest Actual Price': latest_actual_prices,
         'Predicted Stock Price (LSTM)': future_price_lstm_list,
         'Volatility': volatilities,
         'Sharpe Ratio': sharpe_ratios,
-        'News Sentiment Scores': news_sentiment_scores  # Add the new feature
+        'News Sentiment Scores': news_sentiment_scores  # New feature
     }
     results_df = pd.DataFrame(results_data)
 
