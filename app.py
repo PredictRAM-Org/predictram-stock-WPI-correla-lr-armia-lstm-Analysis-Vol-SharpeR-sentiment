@@ -47,11 +47,11 @@ def get_sentiment_score(text):
 
 # Function to get news articles and sentiment scores for a given stock
 def get_news_sentiment_scores(stock_name, num_articles=5):
-    url = "https://news-api14.p.rapidapi.com/top-headlines"
-    querystring = {"q": stock_name, "pageSize": str(num_articles), "language": "en"}
+    url = "https://share-market-news-api-india.p.rapidapi.com/marketNews"
+    querystring = {"symbol": stock_name, "page": "1", "per_page": str(num_articles)}
     headers = {
         "X-RapidAPI-Key": "f6dde4233cmsha8c2e88f35ed868p173a8bjsnba9808b5b893",
-        "X-RapidAPI-Host": "news-api14.p.rapidapi.com"
+        "X-RapidAPI-Host": "share-market-news-api-india.p.rapidapi.com"
     }
     response = requests.get(url, headers=headers, params=querystring)
     news_data = response.json()
@@ -59,13 +59,12 @@ def get_news_sentiment_scores(stock_name, num_articles=5):
     sentiment_scores = []
     articles_list = []
 
-    if 'articles' in news_data:
-        articles = news_data['articles']
+    if 'data' in news_data and 'news' in news_data['data']:
+        articles = news_data['data']['news']
         for article in articles:
             title = article.get('title', '')
             description = article.get('description', '')
-            content = article.get('content', '')
-            full_text = f"{title}. {description}. {content}"
+            full_text = f"{title}. {description}"
             sentiment_score = get_sentiment_score(full_text)
             sentiment_scores.append(sentiment_score)
             articles_list.append({'Title': title, 'Description': description, 'Sentiment Score': sentiment_score})
