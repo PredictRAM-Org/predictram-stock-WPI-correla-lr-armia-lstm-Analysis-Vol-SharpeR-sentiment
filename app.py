@@ -45,8 +45,8 @@ def get_sentiment_score(text):
     sentiment_score = analyzer.polarity_scores(text)['compound']
     return sentiment_score
 
-# Function to get sentiment score for the latest news related to each stock
-def get_news_sentiment_score(stock_name):
+# Function to get sentiment scores for the latest news related to each stock
+def get_news_sentiment_scores(stock_name):
     url = "https://news-api14.p.rapidapi.com/top-headlines"
     querystring = {"q": stock_name, "pageSize": "10", "language": "en"}
     headers = {
@@ -183,13 +183,13 @@ if st.button("Train Models"):
             st.write(f"Predicted Stock Price for Future Inflation (LSTM): {future_price_lstm}")
 
             # Calculate sentiment score for the latest news related to the stock
-            sentiment_score = get_news_sentiment_score(stock_name)
+            sentiment_score = get_news_sentiment_scores(stock_name)
             if sentiment_score is not None:
-                st.write(f"Average Sentiment Score for Latest News on {stock_name}: {sentiment_score}")
+                st.write(f"Sentiment Scores for {stock_name}: {sentiment_score}")
             else:
                 sentiment_score = np.nan  # Set NaN if no news found
 
-            news_sentiment_scores.append(sentiment_score)
+            news_sentiment_scores.append({'Stock': stock_name, 'Sentiment Score': sentiment_score})
 
             # Display the latest actual price
             latest_actual_price = merged_data['Close'].iloc[-1]
@@ -226,7 +226,7 @@ if st.button("Train Models"):
         'Predicted Stock Price (LSTM)': future_price_lstm_list,
         'Volatility': volatilities,
         'Sharpe Ratio': sharpe_ratios,
-        'News Sentiment Score': news_sentiment_scores  # Add the new feature
+        'News Sentiment Scores': news_sentiment_scores  # Add the new feature
     }
     results_df = pd.DataFrame(results_data)
 
