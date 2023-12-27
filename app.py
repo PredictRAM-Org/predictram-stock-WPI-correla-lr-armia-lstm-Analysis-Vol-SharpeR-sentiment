@@ -211,7 +211,7 @@ if st.button("Train Models"):
                     st.write(f"Link: {article['Link']}")
                     st.write("-----")
 
-                news_sentiment_scores.append({'Stock': stock_name, 'Avg. Sentiment Score': avg_sentiment_score, 'News Articles': news_articles})
+                news_sentiment_scores.append({'Stock': stock_name, 'Avg. Sentiment Score': avg_sentiment_score})
             else:
                 st.warning(f"No news found for {stock_name}.")
 
