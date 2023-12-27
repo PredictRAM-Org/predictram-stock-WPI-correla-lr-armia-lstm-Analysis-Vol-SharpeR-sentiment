@@ -7,12 +7,8 @@ import numpy as np
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import LSTM, Dense
 from sklearn.preprocessing import MinMaxScaler
+from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
 import requests
-from nltk.sentiment.vader import SentimentIntensityAnalyzer
-import nltk
-
-# Download the NLTK VADER lexicon data
-nltk.download('vader_lexicon')
 
 # Function to prepare data for LSTM
 def prepare_data_for_lstm(data, look_back=1):
@@ -43,27 +39,31 @@ def predict_future_lstm(last_observed_price, model, min_max_scaler, num_steps=1)
 
     return min_max_scaler.inverse_transform(np.array(predicted_prices).reshape(1, -1))[0]
 
-# Function to get sentiment score for a given text
+# Function to get sentiment score for a given text using VADER
 def get_sentiment_score(text):
-    sid = SentimentIntensityAnalyzer()
-    sentiment_score = sid.polarity_scores(text)['compound']
+    analyzer = SentimentIntensityAnalyzer()
+    sentiment_score = analyzer.polarity_scores(text)['compound']
     return sentiment_score
 
-# Function to fetch news and calculate sentiment scores
-def get_news_sentiment_score(stock_name, api_key):
+# Function to get sentiment score for the latest news related to each stock
+def get_news_sentiment_score(stock_name):
     url = "https://news-api14.p.rapidapi.com/top-headlines"
-    querystring = {"q": stock_name, "language": "en", "pageSize": "5"}
+    querystring = {"q": stock_name, "pageSize": "10", "language": "en"}
     headers = {
-        "X-RapidAPI-Key": api_key,
+        "X-RapidAPI-Key": "f6dde4233cmsha8c2e88f35ed868p173a8bjsnba9808b5b893",
         "X-RapidAPI-Host": "news-api14.p.rapidapi.com"
     }
     response = requests.get(url, headers=headers, params=querystring)
     news_data = response.json()
 
-    sentiment_scores = [get_sentiment_score(article['title']) for article in news_data['articles']]
-    average_sentiment = np.mean(sentiment_scores) if sentiment_scores else 0.0
-
-    return average_sentiment
+    if 'articles' in news_data:
+        articles = news_data['articles']
+        sentiment_scores = [get_sentiment_score(article['title']) for article in articles]
+        avg_sentiment_score = np.mean(sentiment_scores)
+        return avg_sentiment_score
+    else:
+        st.warning(f"No news found for {stock_name}.")
+        return None
 
 # Load WPI data
 WPI_data = pd.read_excel("WPI.xlsx")
@@ -72,7 +72,7 @@ WPI_data.set_index('Date', inplace=True)
 
 # Streamlit UI
 st.image("png_2.3-removebg-preview.png", width=400)  # Replace "your_logo.png" with the path to your logo
-st.title("sssStock-WPI Correlation Analysis with Expected Inflation, Price Prediction, and Sentiment Analysis")
+st.title("Stock-WPI Correlation Analysis with Expected Inflation, Price Prediction, and Sentiment Analysis")
 
 # User input for uploading Excel file with stocks name column
 uploaded_file = st.file_uploader("Upload Excel file with stocks name column", type=["xlsx", "xls"])
@@ -111,19 +111,15 @@ if st.button("Train Models"):
     future_prices_arima_list = []
     latest_actual_prices = []
     future_price_lstm_list = []
-    sentiment_scores_list = []  # New list for sentiment scores
     stock_names = []
     volatilities = []
     sharpe_ratios = []
+    news_sentiment_scores = []  # New feature
 
     for index, row in stocks_data.iterrows():
         stock_name = row['Stock']
 
-        # Fetch sentiment scores for the stock's latest 5 news reports
-        sentiment_score = get_news_sentiment_score(stock_name, "f6dde4233cmsha8c2e88f35ed868p173a8bjsnba9808b5b893")
-        sentiment_scores_list.append(sentiment_score)
-
-        # Fetch stock data and filter based on the selected date range
+        # Fetch stock data and filter based on selected date range
         stock_file_path = os.path.join("stock_folder", f"{stock_name}.xlsx")
         if os.path.exists(stock_file_path):
             selected_stock_data = pd.read_excel(stock_file_path)
@@ -186,6 +182,15 @@ if st.button("Train Models"):
             future_price_lstm = predict_future_lstm(last_observed_price, model_lstm, min_max_scaler)
             st.write(f"Predicted Stock Price for Future Inflation (LSTM): {future_price_lstm}")
 
+            # Calculate sentiment score for the latest news related to the stock
+            sentiment_score = get_news_sentiment_score(stock_name)
+            if sentiment_score is not None:
+                st.write(f"Average Sentiment Score for Latest News on {stock_name}: {sentiment_score}")
+            else:
+                sentiment_score = np.nan  # Set NaN if no news found
+
+            news_sentiment_scores.append(sentiment_score)
+
             # Display the latest actual price
             latest_actual_price = merged_data['Close'].iloc[-1]
             st.write(f"Latest Actual Price for {stock_name}: {latest_actual_price}")
@@ -219,9 +224,9 @@ if st.button("Train Models"):
         'Predicted Price Change (ARIMA)': future_prices_arima_list,
         'Latest Actual Price': latest_actual_prices,
         'Predicted Stock Price (LSTM)': future_price_lstm_list,
-        'Sentiment Score': sentiment_scores_list,  # New column for sentiment scores
         'Volatility': volatilities,
-        'Sharpe Ratio': sharpe_ratios
+        'Sharpe Ratio': sharpe_ratios,
+        'News Sentiment Score': news_sentiment_scores  # Add the new feature
     }
     results_df = pd.DataFrame(results_data)
 
