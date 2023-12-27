@@ -70,7 +70,7 @@ def get_news_sentiment_scores(stock_name, num_articles=5):
             sentiment_scores.append(sentiment_score)
             articles_list.append({'Title': title, 'Description': description, 'Sentiment Score': sentiment_score})
 
-    return articles_list, np.mean(sentiment_scores) if sentiment_scores else None
+    return articles_list
 
 # Load WPI data
 WPI_data = pd.read_excel("WPI.xlsx")
@@ -190,22 +190,24 @@ if st.button("Train Models"):
             st.write(f"Predicted Stock Price for Future Inflation (LSTM): {future_price_lstm}")
 
             # Get news articles and sentiment scores
-            news_articles, avg_sentiment_score = get_news_sentiment_scores(stock_name, num_articles=5)
+            news_articles = get_news_sentiment_scores(stock_name, num_articles=5)
 
             # Display news articles and sentiment scores
             st.write(f"News Articles and Sentiment Scores for {stock_name}:")
-            st.write(f"Avg. Sentiment Score: {avg_sentiment_score}")
 
             if news_articles:
+                avg_sentiment_score = np.mean([article['Sentiment Score'] for article in news_articles])
+                st.write(f"Avg. Sentiment Score: {avg_sentiment_score}")
+
                 for article in news_articles:
                     st.write(f"Title: {article['Title']}")
                     st.write(f"Description: {article['Description']}")
                     st.write(f"Sentiment Score: {article['Sentiment Score']}")
                     st.write("-----")
+
+                news_sentiment_scores.append({'Stock': stock_name, 'Avg. Sentiment Score': avg_sentiment_score})
             else:
                 st.warning(f"No news found for {stock_name}.")
-
-            news_sentiment_scores.append({'Stock': stock_name, 'Avg. Sentiment Score': avg_sentiment_score})
 
             # Display the latest actual price
             latest_actual_price = merged_data['Close'].iloc[-1]
