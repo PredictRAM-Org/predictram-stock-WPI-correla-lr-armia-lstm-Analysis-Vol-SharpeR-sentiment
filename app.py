@@ -46,7 +46,7 @@ def get_sentiment_score(text):
     return sentiment_score
 
 # Function to get news articles and sentiment scores for a given stock
-def get_news_sentiment_scores(api_key, stock_name, num_articles=5):
+def get_news_sentiment_scores(api_key, stock_name, num_articles=10):
     url = "https://newsapi.org/v2/everything"
     query_params = {
         "apiKey": api_key,
