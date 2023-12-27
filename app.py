@@ -45,10 +45,10 @@ def get_sentiment_score(text):
     sentiment_score = analyzer.polarity_scores(text)['compound']
     return sentiment_score
 
-# Function to get sentiment scores for the latest news related to each stock
-def get_news_sentiment_scores(stock_name):
+# Function to get news articles and sentiment scores for a given stock
+def get_news_sentiment_scores(stock_name, num_articles=5):
     url = "https://news-api14.p.rapidapi.com/top-headlines"
-    querystring = {"q": stock_name, "pageSize": "10", "language": "en"}
+    querystring = {"q": stock_name, "pageSize": str(num_articles), "language": "en"}
     headers = {
         "X-RapidAPI-Key": "f6dde4233cmsha8c2e88f35ed868p173a8bjsnba9808b5b893",
         "X-RapidAPI-Host": "news-api14.p.rapidapi.com"
@@ -56,14 +56,21 @@ def get_news_sentiment_scores(stock_name):
     response = requests.get(url, headers=headers, params=querystring)
     news_data = response.json()
 
+    sentiment_scores = []
+    articles_list = []
+
     if 'articles' in news_data:
         articles = news_data['articles']
-        sentiment_scores = [get_sentiment_score(article['title']) for article in articles]
-        avg_sentiment_score = np.mean(sentiment_scores)
-        return avg_sentiment_score
-    else:
-        st.warning(f"No news found for {stock_name}.")
-        return None
+        for article in articles:
+            title = article.get('title', '')
+            description = article.get('description', '')
+            content = article.get('content', '')
+            full_text = f"{title}. {description}. {content}"
+            sentiment_score = get_sentiment_score(full_text)
+            sentiment_scores.append(sentiment_score)
+            articles_list.append({'Title': title, 'Description': description, 'Sentiment Score': sentiment_score})
+
+    return articles_list, np.mean(sentiment_scores) if sentiment_scores else None
 
 # Load WPI data
 WPI_data = pd.read_excel("WPI.xlsx")
@@ -182,14 +189,23 @@ if st.button("Train Models"):
             future_price_lstm = predict_future_lstm(last_observed_price, model_lstm, min_max_scaler)
             st.write(f"Predicted Stock Price for Future Inflation (LSTM): {future_price_lstm}")
 
-            # Calculate sentiment score for the latest news related to the stock
-            sentiment_score = get_news_sentiment_scores(stock_name)
-            if sentiment_score is not None:
-                st.write(f"Sentiment Scores for {stock_name}: {sentiment_score}")
-            else:
-                sentiment_score = np.nan  # Set NaN if no news found
+            # Get news articles and sentiment scores
+            news_articles, avg_sentiment_score = get_news_sentiment_scores(stock_name, num_articles=5)
 
-            news_sentiment_scores.append({'Stock': stock_name, 'Sentiment Score': sentiment_score})
+            # Display news articles and sentiment scores
+            st.write(f"News Articles and Sentiment Scores for {stock_name}:")
+            st.write(f"Avg. Sentiment Score: {avg_sentiment_score}")
+
+            if news_articles:
+                for article in news_articles:
+                    st.write(f"Title: {article['Title']}")
+                    st.write(f"Description: {article['Description']}")
+                    st.write(f"Sentiment Score: {article['Sentiment Score']}")
+                    st.write("-----")
+            else:
+                st.warning(f"No news found for {stock_name}.")
+
+            news_sentiment_scores.append({'Stock': stock_name, 'Avg. Sentiment Score': avg_sentiment_score})
 
             # Display the latest actual price
             latest_actual_price = merged_data['Close'].iloc[-1]
